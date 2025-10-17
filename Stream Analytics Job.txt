@@ -1,0 +1,183 @@
+WITH GreenTrips AS (
+    SELECT
+        COALESCE(VendorID, 0) AS VendorID,
+        lpep_pickup_datetime AS pickup_datetime,
+        COALESCE(lpep_dropoff_datetime, lpep_pickup_datetime) AS dropoff_datetime,
+        DATEDIFF(MINUTE, lpep_pickup_datetime, COALESCE(lpep_dropoff_datetime, lpep_pickup_datetime)) AS trip_duration_minutes,
+        SUBSTRING(CAST(lpep_pickup_datetime AS NVARCHAR(MAX)), 1, 10) AS pickup_date,
+        SUBSTRING(CAST(lpep_pickup_datetime AS NVARCHAR(MAX)), 12, 8) AS pickup_time,
+        DATEPART(HOUR, lpep_pickup_datetime) AS hour,
+        DATEPART(DAY, lpep_pickup_datetime) AS day,
+        DATEPART(MONTH, lpep_pickup_datetime) AS month,
+        DATEPART(YEAR, lpep_pickup_datetime) AS year,
+        COALESCE(store_and_fwd_flag, 'U') AS store_and_fwd_flag,
+        COALESCE(RatecodeID, 99) AS RatecodeID,
+        COALESCE(PULocationID, 264) AS PULocationID,
+        COALESCE(DOLocationID, 264) AS DOLocationID,
+        COALESCE(passenger_count, 1) AS passenger_count,
+        COALESCE(trip_distance, 0) AS trip_distance,
+        COALESCE(fare_amount, 0) AS fare_amount,
+        COALESCE(extra, 0) AS extra,
+        COALESCE(mta_tax, 0) AS mta_tax,
+        COALESCE(tip_amount, 0) AS tip_amount,
+        COALESCE(tolls_amount, 0) AS tolls_amount,
+        COALESCE(improvement_surcharge, 0) AS improvement_surcharge,
+        COALESCE(total_amount, 0) AS total_amount,
+        CAST(COALESCE(payment_type, 5) AS NVARCHAR(MAX)) AS payment_type,
+        CAST(COALESCE(trip_type, 0) AS NVARCHAR(MAX)) AS trip_type,
+        COALESCE(congestion_surcharge, 0) AS congestion_surcharge,
+        COALESCE(cbd_congestion_fee, 0) AS cbd_congestion_fee,
+        CAST(COALESCE(NULL, '0') AS NVARCHAR(MAX)) AS airport_fee,
+        'green' AS trip_type_source,
+        CONCAT(CAST(lpep_pickup_datetime AS NVARCHAR(MAX)), '_', CAST(COALESCE(PULocationID, 264) AS NVARCHAR(MAX)), '_', CAST(COALESCE(DOLocationID, 264) AS NVARCHAR(MAX))) AS id
+    FROM [yellow-green-trips]
+    WHERE trip_type_source = 'green'
+        AND lpep_pickup_datetime IS NOT NULL
+),
+YellowTrips AS (
+    SELECT
+        COALESCE(VendorID, 0) AS VendorID,
+        tpep_pickup_datetime AS pickup_datetime,
+        COALESCE(tpep_dropoff_datetime, tpep_pickup_datetime) AS dropoff_datetime,
+        DATEDIFF(MINUTE, tpep_pickup_datetime, COALESCE(tpep_dropoff_datetime, tpep_pickup_datetime)) AS trip_duration_minutes,
+        SUBSTRING(CAST(lpep_pickup_datetime AS NVARCHAR(MAX)), 1, 10) AS pickup_date,
+        SUBSTRING(CAST(lpep_pickup_datetime AS NVARCHAR(MAX)), 12, 8) AS pickup_time,
+        DATEPART(HOUR, tpep_pickup_datetime) AS hour,
+        DATEPART(DAY, tpep_pickup_datetime) AS day,
+        DATEPART(MONTH, tpep_pickup_datetime) AS month,
+        DATEPART(YEAR, tpep_pickup_datetime) AS year,
+        COALESCE(store_and_fwd_flag, 'U') AS store_and_fwd_flag,
+        COALESCE(RatecodeID, 99) AS RatecodeID,
+        COALESCE(PULocationID, 264) AS PULocationID,
+        COALESCE(DOLocationID, 264) AS DOLocationID,
+        COALESCE(passenger_count, 1) AS passenger_count,
+        COALESCE(trip_distance, 0) AS trip_distance,
+        COALESCE(fare_amount, 0) AS fare_amount,
+        COALESCE(extra, 0) AS extra,
+        COALESCE(mta_tax, 0) AS mta_tax,
+        COALESCE(tip_amount, 0) AS tip_amount,
+        COALESCE(tolls_amount, 0) AS tolls_amount,
+        COALESCE(improvement_surcharge, 0) AS improvement_surcharge,
+        COALESCE(total_amount, 0) AS total_amount,
+        CAST(COALESCE(payment_type, 5) AS NVARCHAR(MAX)) AS payment_type,
+        CAST(NULL AS NVARCHAR(MAX)) AS trip_type,
+        COALESCE(congestion_surcharge, 0) AS congestion_surcharge,
+        COALESCE(cbd_congestion_fee, 0) AS cbd_congestion_fee,
+        CAST(COALESCE(airport_fee, 0) AS NVARCHAR(MAX)) AS airport_fee,
+        'yellow' AS trip_type_source,
+        CONCAT(CAST(tpep_pickup_datetime AS NVARCHAR(MAX)), '_', CAST(COALESCE(PULocationID, 264) AS NVARCHAR(MAX)), '_', CAST(COALESCE(DOLocationID, 264) AS NVARCHAR(MAX))) AS id
+    FROM [yellow-green-trips]
+    WHERE trip_type_source = 'yellow'
+        AND tpep_pickup_datetime IS NOT NULL
+),
+DroppedRows AS (
+    SELECT
+        COALESCE(VendorID, 0) AS VendorID,
+        lpep_pickup_datetime AS pickup_datetime,
+        lpep_dropoff_datetime AS dropoff_datetime,
+        DATEDIFF(MINUTE, lpep_pickup_datetime, COALESCE(lpep_dropoff_datetime, lpep_pickup_datetime)) AS trip_duration_minutes,
+        SUBSTRING(CAST(lpep_pickup_datetime AS NVARCHAR(MAX)), 1, 10) AS pickup_date,
+        SUBSTRING(CAST(lpep_pickup_datetime AS NVARCHAR(MAX)), 12, 8) AS pickup_time,
+        COALESCE(DATEPART(HOUR, lpep_pickup_datetime), 0) AS hour,
+        COALESCE(DATEPART(DAY, lpep_pickup_datetime), 1) AS day,
+        COALESCE(DATEPART(MONTH, lpep_pickup_datetime), 1) AS month,
+        COALESCE(DATEPART(YEAR, lpep_pickup_datetime), 1970) AS year,
+        COALESCE(store_and_fwd_flag, 'U') AS store_and_fwd_flag,
+        COALESCE(RatecodeID, 99) AS RatecodeID,
+        COALESCE(PULocationID, 264) AS PULocationID,
+        COALESCE(DOLocationID, 264) AS DOLocationID,
+        COALESCE(passenger_count, 1) AS passenger_count,
+        COALESCE(trip_distance, 0) AS trip_distance,
+        COALESCE(fare_amount, 0) AS fare_amount,
+        COALESCE(extra, 0) AS extra,
+        COALESCE(mta_tax, 0) AS mta_tax,
+        COALESCE(tip_amount, 0) AS tip_amount,
+        COALESCE(tolls_amount, 0) AS tolls_amount,
+        COALESCE(improvement_surcharge, 0) AS improvement_surcharge,
+        COALESCE(total_amount, 0) AS total_amount,
+        CAST(COALESCE(payment_type, 5) AS NVARCHAR(MAX)) AS payment_type,
+        CAST(COALESCE(trip_type, 0) AS NVARCHAR(MAX)) AS trip_type,
+        COALESCE(congestion_surcharge, 0) AS congestion_surcharge,
+        COALESCE(cbd_congestion_fee, 0) AS cbd_congestion_fee,
+        CAST(COALESCE(NULL, '0') AS NVARCHAR(MAX)) AS airport_fee,
+        'green' AS trip_type_source,
+        CONCAT(CAST(lpep_pickup_datetime AS NVARCHAR(MAX)), '_', CAST(COALESCE(PULocationID, 264) AS NVARCHAR(MAX)), '_', CAST(COALESCE(DOLocationID, 264) AS NVARCHAR(MAX))) AS id,
+        CASE
+            WHEN lpep_pickup_datetime IS NULL THEN 'Missing pickup_datetime'
+            WHEN lpep_dropoff_datetime IS NULL THEN 'Missing dropoff_datetime'
+            WHEN trip_distance = 0 THEN 'Zero trip_distance'
+            ELSE 'Unknown reason'
+        END AS drop_reason
+    FROM [yellow-green-trips]
+    WHERE trip_type_source = 'green'
+        AND (
+            lpep_pickup_datetime IS NULL
+            OR lpep_dropoff_datetime IS NULL
+            OR trip_distance = 0
+        )
+    UNION
+    SELECT
+        COALESCE(VendorID, 0) AS VendorID,
+        tpep_pickup_datetime AS pickup_datetime,
+        tpep_dropoff_datetime AS dropoff_datetime,
+        DATEDIFF(MINUTE, tpep_pickup_datetime, COALESCE(tpep_dropoff_datetime, tpep_pickup_datetime)) AS trip_duration_minutes,
+        SUBSTRING(CAST(tpep_pickup_datetime AS NVARCHAR(MAX)), 1, 10) AS pickup_date,
+        SUBSTRING(CAST(tpep_pickup_datetime AS NVARCHAR(MAX)), 12, 8) AS pickup_time,
+        COALESCE(DATEPART(HOUR, tpep_pickup_datetime), 0) AS hour,
+        COALESCE(DATEPART(DAY, tpep_pickup_datetime), 1) AS day,
+        COALESCE(DATEPART(MONTH, tpep_pickup_datetime), 1) AS month,
+        COALESCE(DATEPART(YEAR, tpep_pickup_datetime), 1970) AS year,
+        COALESCE(store_and_fwd_flag, 'U') AS store_and_fwd_flag,
+        COALESCE(RatecodeID, 99) AS RatecodeID,
+        COALESCE(PULocationID, 264) AS PULocationID,
+        COALESCE(DOLocationID, 264) AS DOLocationID,
+        COALESCE(passenger_count, 1) AS passenger_count,
+        COALESCE(trip_distance, 0) AS trip_distance,
+        COALESCE(fare_amount, 0) AS fare_amount,
+        COALESCE(extra, 0) AS extra,
+        COALESCE(mta_tax, 0) AS mta_tax,
+        COALESCE(tip_amount, 0) AS tip_amount,
+        COALESCE(tolls_amount, 0) AS tolls_amount,
+        COALESCE(improvement_surcharge, 0) AS improvement_surcharge,
+        COALESCE(total_amount, 0) AS total_amount,
+        CAST(COALESCE(payment_type, 5) AS NVARCHAR(MAX)) AS payment_type,
+        CAST(NULL AS NVARCHAR(MAX)) AS trip_type,
+        COALESCE(congestion_surcharge, 0) AS congestion_surcharge,
+        COALESCE(cbd_congestion_fee, 0) AS cbd_congestion_fee,
+        CAST(COALESCE(airport_fee, 0) AS NVARCHAR(MAX)) AS airport_fee,
+        'yellow' AS trip_type_source,
+        CONCAT(CAST(tpep_pickup_datetime AS NVARCHAR(MAX)), '_', CAST(COALESCE(PULocationID, 264) AS NVARCHAR(MAX)), '_', CAST(COALESCE(DOLocationID, 264) AS NVARCHAR(MAX))) AS id,
+        CASE
+            WHEN tpep_pickup_datetime IS NULL THEN 'Missing pickup_datetime'
+            WHEN tpep_dropoff_datetime IS NULL THEN 'Missing dropoff_datetime'
+            WHEN trip_distance = 0 THEN 'Zero trip_distance'
+            ELSE 'Unknown reason'
+        END AS drop_reason
+    FROM [yellow-green-trips]
+    WHERE trip_type_source = 'yellow'
+        AND (
+            tpep_pickup_datetime IS NULL
+            OR tpep_dropoff_datetime IS NULL
+            OR trip_distance = 0
+        )
+),
+CombinedTrips AS (
+    SELECT * FROM GreenTrips
+    UNION
+    SELECT * FROM YellowTrips
+)
+SELECT
+    ct.*
+INTO TaxiTrips
+FROM CombinedTrips ct
+
+SELECT
+    ct.*
+INTO snowflakeOutput
+FROM CombinedTrips ct
+
+SELECT
+    dr.*,
+    DATEADD(hour, 3, System.Timestamp()) AS dropped_timestamp
+INTO droppedoutput
+FROM DroppedRows dr
